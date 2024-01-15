@@ -1,0 +1,20 @@
+name: Label PR
+
+run-name: Setting labels
+
+on:
+  pull_request:
+    branches:
+      - main
+      - staging
+    types:
+      - opened
+      - edited
+  
+jobs:
+  label-pr:
+    uses: azerlinda/githubworkflows/.github/workflows/label-pr.yml@main
+    with:
+      runs-on: "['ubuntu-latest']"
+    secrets:
+      token: ${{ secrets.GITHUB_TOKEN }}

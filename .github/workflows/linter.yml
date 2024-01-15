@@ -1,0 +1,55 @@
+name: Linter
+
+run-name: Running linter
+
+on:
+  workflow_call:
+    inputs:
+      runs-on: # only support ubuntu; this was made into parameter for self-hosted environments
+        default: "['ubuntu-latest']"
+        type: string
+        required: false
+    secrets:
+      token:
+        required: true
+  
+jobs:
+  run-linter:
+    runs-on: ${{ fromJson(inputs.runs-on) }}
+    strategy:
+      matrix:
+        language: ['go']
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install golang
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Go version
+        run: go version
+          
+      - name: Running linter
+        uses: golangci/golangci-lint-action@v3.2.0
+        with:
+          version: v1.44.2  # do not upgrade; v1.45.0 requires go1.18
+          github-token: ${{ secrets.token }}
+          only-new-issues: true
+          args: --skip-dirs=\.github/$
+
+      - name: Post comment if linting fails
+        uses: actions/github-script@v7
+        if: ${{failure()}}
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: 'Errors found from linters! Please fix them.'
+            })
+

@@ -1,0 +1,42 @@
+name: Label PR
+
+run-name: Setting labels
+
+on:
+  workflow_call:
+    inputs:
+      runs-on: # only support ubuntu; this was made into parameter for self-hosted environments
+        default: "['ubuntu-latest']"
+        type: string
+        required: false
+    secrets:
+      token:
+        required: true
+  
+jobs:
+  label-pr:
+    runs-on: ${{ fromJson(inputs.runs-on) }}
+    steps:
+      - name: "Setting staging label"
+        if: ${{ github.base_ref == 'staging' }}
+        run: |
+          gh pr edit "$NUMBER" --add-label "$LABELS"
+          gh pr edit "$NUMBER" --remove-label "$LABELSRM"
+        env:
+          GH_TOKEN: ${{ secrets.token }}
+          GH_REPO: ${{ github.repository }}
+          NUMBER: ${{ github.event.number }}
+          LABELS: staging
+          LABELSRM: production
+
+      - name: "Setting production label"
+        if: ${{ github.base_ref == 'main' || github.base_ref == 'master' }}
+        run: |
+          gh pr edit "$NUMBER" --add-label "$LABELS"
+          gh pr edit "$NUMBER" --remove-label "$LABELSRM"
+        env:
+          GH_TOKEN: ${{ secrets.token }}
+          GH_REPO: ${{ github.repository }}
+          NUMBER: ${{ github.event.number }}
+          LABELS: production
+          LABELSRM: staging

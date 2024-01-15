@@ -1,0 +1,34 @@
+name: Linter
+
+run-name: Running linter
+
+on:
+  pull_request:
+    branches:
+      - main
+      - staging
+      - release**
+    paths:
+      - '**'
+      - '!vendor/**'
+      - '!.github/**'
+    types:
+      - reopened
+      - opened
+      - synchronize
+
+permissions:
+  contents: read
+  # Optional: allow read access to pull request. Use with `only-new-issues` option.
+  pull-requests: write
+  # Optional: Allow write access to checks to allow the action to annotate code in the PR.
+  checks: write
+  
+jobs:
+  run-linter:
+    uses: azerlinda/githubworkflows/.github/workflows/linter.yml@main
+    with:
+      runs-on: "['ubuntu-latest']"
+    secrets:
+      token: ${{ secrets.GITHUB_TOKEN }}
+

@@ -1,0 +1,20 @@
+name: Remove remote branch on merge
+
+run-name: Removing remote branch
+
+on:
+  pull_request:
+    branches:
+      - main
+      - staging
+      - release**
+    types:
+      - closed
+  
+jobs:
+  remove-branch:
+    uses: azerlinda/githubworkflows/.github/workflows/remove-branch-on-merge.yml@main
+    with:
+      runs-on: "['ubuntu-latest']"
+
+

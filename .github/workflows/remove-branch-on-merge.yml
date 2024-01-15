@@ -1,0 +1,31 @@
+name: Remove remote branch on merge
+
+run-name: Removing remote branch
+
+on:
+  workflow_call:
+    inputs:
+      runs-on: # only support ubuntu; this was made into parameter for self-hosted environments
+        default: "['ubuntu-latest']"
+        type: string
+        required: false
+  
+jobs:
+  remove-branch:
+    runs-on: ${{ fromJson(inputs.runs-on) }}
+    if: github.event.pull_request.merged == true && (github.base_ref == 'main' || github.base_ref == 'master' || startsWith('release', github.base_ref) || startsWith('mc', github.head_ref))
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set config
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git config --global url.https://github.com/.insteadOf git://github.com/
+          git remote set-url origin ${{ github.repositoryUrl }}
+
+      - name: Removing remote branch
+        run: git push origin -d ${{ github.head_ref }}
+
+

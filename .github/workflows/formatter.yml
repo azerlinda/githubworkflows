@@ -1,0 +1,70 @@
+name: Formatter
+
+run-name: Running formatter
+
+on:
+  workflow_call:
+    inputs:
+      runs-on: # only support ubuntu; this was made into parameter for self-hosted environments
+        default: "['ubuntu-latest']"
+        type: string
+        required: false
+  
+jobs:
+  run-formatter:
+    runs-on: ${{ fromJson(inputs.runs-on) }}
+    name: 'Formatting'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Install golang formatter
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Install protobuf formatter
+        run: sudo apt-get install -y clang-format
+
+      - name: Set config
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git config --global url.https://github.com/.insteadOf git://github.com/
+          git remote set-url origin ${{ github.repositoryUrl }}
+      
+      - name: Checkout branch ${{ github.event.pull_request.head.ref }}
+        run: git checkout -b ${{ github.event.pull_request.head.ref }}
+
+      - name: Formatting go files
+        run: go fmt $(go list ./... | grep -v /vendor/)
+
+      - name: Formatting proto files
+        run: find . -type f -name "*.proto" | grep -v /vendor/ | xargs clang-format --assume-filename=Proto  -i -style='{"BasedOnStyle":"chromium"}'
+
+      - id: diff
+        name: Check file changes
+        run: |
+          message=$(echo $(git diff) | tr '\n' ' ')
+          echo "diff=$message" >> $GITHUB_OUTPUT
+
+      - name: Push changes
+        if: ${{ steps.diff.outputs.diff != '' && steps.diff.outputs.diff != ' ' }}
+        run: |
+          git add .
+          git commit -am "formatter"
+          git push origin ${{ github.event.pull_request.head.ref }}
+
+      - name: Post comment if formatting fails
+        uses: actions/github-script@v7
+        if: ${{failure()}}
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: 'Error formatting the files.'
+            })
